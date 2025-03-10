@@ -8,45 +8,42 @@ fi
 
 email="$1"
 domain="lol.maleh.my.id"
-rsa_key_size=4096
-data_path="./data/certbot"
 
-# Create required directories
-mkdir -p "$data_path/conf/live/$domain"
-mkdir -p "$data_path/www"
-mkdir -p "html"
+echo "### Installing Certbot..."
+sudo apt update
+sudo apt install -y certbot
 
-# Stop any existing containers
-docker-compose down
+echo "### Stopping any existing web servers..."
+sudo systemctl stop nginx apache2 2>/dev/null || true
 
-# Create dummy certificate
-openssl req -x509 -nodes -newkey rsa:$rsa_key_size -days 1 \
-    -keyout "$data_path/conf/live/$domain/privkey.pem" \
-    -out "$data_path/conf/live/$domain/fullchain.pem" \
-    -subj "/CN=localhost"
-
-echo "### Starting nginx container..."
-docker-compose up -d nginx
-
-echo "### Deleting dummy certificate..."
-rm -rf "$data_path/conf/live/$domain"
-
-echo "### Requesting Let's Encrypt certificate for $domain..."
-
-# Enable staging mode if needed
-staging=""
-if [ "$staging" != "0" ]; then
-    staging="--staging"
-fi
-
-docker-compose run --rm --entrypoint "\
-    certbot certonly --webroot -w /var/www/certbot \
-    $staging \
-    --email $email \
+echo "### Obtaining certificate using standalone mode..."
+sudo certbot certonly --standalone \
+    --email "$email" \
     --agree-tos \
     --no-eff-email \
-    -d $domain \
-    --force-renewal" certbot
+    -d "$domain"
 
-echo "### Reloading nginx..."
-docker-compose exec nginx nginx -s reload
+if [ ! -d "/etc/letsencrypt/live/$domain" ]; then
+    echo "Failed to obtain certificate!"
+    exit 1
+fi
+
+echo "### Setting up Docker environment..."
+
+# Create required directories and copy certificates
+mkdir -p ./data/certbot/conf
+mkdir -p ./data/certbot/www
+mkdir -p ./html
+mkdir -p ./log/nginx
+
+# Copy certificates from Let's Encrypt to our project directory
+sudo cp -rL /etc/letsencrypt/live/$domain/* ./data/certbot/conf/
+sudo cp -r /etc/letsencrypt/archive/$domain ./data/certbot/conf/
+sudo chown -R $USER:$USER ./data/certbot/conf/
+
+echo "### Starting Docker containers..."
+docker-compose down
+docker-compose up -d
+
+echo "### Setup completed!"
+echo "Visit https://$domain to verify the installation"

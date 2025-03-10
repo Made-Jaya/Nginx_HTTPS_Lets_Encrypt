@@ -74,70 +74,72 @@ sudo lsof -i :80 -i :443
    chmod +x init-letsencrypt.sh
    ```
 
-4. **Run the Setup with Your Email**
+4. **Stop Any Running Web Servers**
    ```bash
-   ./init-letsencrypt.sh your-email@example.com
+   sudo systemctl stop nginx apache2
    ```
 
-   This command:
-   - Creates necessary directories
-   - Generates temporary SSL certificate
-   - Starts Nginx
-   - Obtains Let's Encrypt certificate
-   - Reloads Nginx with new certificate
-
-5. **Verify the Setup**
+5. **Run the Setup Script**
    ```bash
-   # Check running containers
+   sudo ./init-letsencrypt.sh your-email@example.com
+   ```
+
+   This script will:
+   - Install Certbot if not installed
+   - Stop any running web servers
+   - Obtain SSL certificate using standalone mode
+   - Set up Docker environment
+   - Copy certificates to the correct location
+   - Start Nginx in Docker
+
+6. **Verify the Setup**
+   ```bash
+   # Check the certificate
+   curl -vI https://lol.maleh.my.id
+   
+   # Check nginx container
    docker-compose ps
    
-   # Check certbot logs
-   docker-compose logs certbot
-   
-   # Check nginx logs
+   # View nginx logs
    docker-compose logs nginx
    ```
-   This will:
-   - Create required directories
-   - Generate temporary SSL certificates
-   - Start Nginx
-   - Obtain real Let's Encrypt certificates
 
-6. **Start the Services**
+## Troubleshooting
+
+1. **Certificate Issues**
    ```bash
-   docker-compose up -d
+   # Check certificate status
+   sudo certbot certificates
+   
+   # View certificate details
+   openssl x509 -in /etc/letsencrypt/live/lol.maleh.my.id/cert.pem -text -noout
    ```
 
-## Common Issues and Solutions
-
-1. **Connection Refused Error**
+2. **Nginx Container Issues**
    ```bash
-   # Check if nginx is listening on ports
-   sudo netstat -tulpn | grep -E ':80|:443'
-   
-   # Check nginx logs
+   # Check container logs
    docker-compose logs nginx
    
-   # Verify docker container is running
-   docker-compose ps
+   # Verify nginx config
+   docker-compose exec nginx nginx -t
    ```
 
-2. **Certificate Issuance Fails**
+3. **Port Conflicts**
    ```bash
-   # Check if ports 80/443 are open
-   curl -v http://lol.maleh.my.id/.well-known/acme-challenge/test
+   # Check for processes using ports 80/443
+   sudo lsof -i :80 -i :443
    
-   # Check certbot logs
-   docker-compose logs certbot
+   # Stop conflicting services
+   sudo systemctl stop apache2 nginx
    ```
 
-3. **DNS Issues**
+4. **Permission Issues**
    ```bash
-   # Verify DNS resolution
-   dig lol.maleh.my.id
+   # Fix certificate permissions
+   sudo chown -R $USER:$USER ./data/certbot/conf/
    
-   # Check A record is pointing to correct IP
-   host lol.maleh.my.id
+   # Check directory permissions
+   ls -la ./data/certbot/conf/
    ```
 
 ## Maintenance
