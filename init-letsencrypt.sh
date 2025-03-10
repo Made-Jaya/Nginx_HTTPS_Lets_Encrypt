@@ -1,35 +1,52 @@
 #!/bin/bash
 
-domains=(lol.maleh.my.id)
-email="" # Add your email address here
-staging=0 # Set to 1 if you're testing your setup
+# Check if email is provided
+if [ "$#" -ne 1 ]; then
+    echo "Usage: $0 your-email@example.com"
+    exit 1
+fi
+
+email="$1"
+domain="lol.maleh.my.id"
+rsa_key_size=4096
+data_path="./data/certbot"
 
 # Create required directories
-mkdir -p data/certbot/conf
-mkdir -p data/certbot/www
-mkdir -p html
+mkdir -p "$data_path/conf/live/$domain"
+mkdir -p "$data_path/www"
+mkdir -p "html"
 
 # Stop any existing containers
 docker-compose down
 
-# Create dummy certificates
-path="/etc/letsencrypt/live/lol.maleh.my.id"
-docker-compose run --rm --entrypoint "\
-  openssl req -x509 -nodes -newkey rsa:4096 -days 1\
-    -keyout '$path/privkey.pem' \
-    -out '$path/fullchain.pem' \
-    -subj '/CN=localhost'" certbot
+# Create dummy certificate
+openssl req -x509 -nodes -newkey rsa:$rsa_key_size -days 1 \
+    -keyout "$data_path/conf/live/$domain/privkey.pem" \
+    -out "$data_path/conf/live/$domain/fullchain.pem" \
+    -subj "/CN=localhost"
 
-# Start nginx
-docker-compose up --force-recreate -d nginx
+echo "### Starting nginx container..."
+docker-compose up -d nginx
 
-# Request Let's Encrypt certificate
+echo "### Deleting dummy certificate..."
+rm -rf "$data_path/conf/live/$domain"
+
+echo "### Requesting Let's Encrypt certificate for $domain..."
+
+# Enable staging mode if needed
+staging=""
+if [ "$staging" != "0" ]; then
+    staging="--staging"
+fi
+
 docker-compose run --rm --entrypoint "\
-  certbot certonly --webroot -w /var/www/certbot \
+    certbot certonly --webroot -w /var/www/certbot \
+    $staging \
     --email $email \
     --agree-tos \
     --no-eff-email \
+    -d $domain \
     --force-renewal" certbot
 
-# Reload nginx
+echo "### Reloading nginx..."
 docker-compose exec nginx nginx -s reload

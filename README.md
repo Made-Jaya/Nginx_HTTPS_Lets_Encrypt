@@ -7,7 +7,41 @@ This repository contains configuration for setting up Nginx with HTTPS using Let
 - Docker installed on your system
 - Docker Compose installed on your system
 - A domain name (lol.maleh.my.id) with DNS A record pointing to your server's IP address
-- Port 80 and 443 available on your server
+
+## Required Ports
+
+The following ports must be open on your server:
+
+| Port | Protocol | Description                                           |
+|------|----------|-------------------------------------------------------|
+| 80   | TCP      | HTTP - Required for Let's Encrypt domain validation    |
+| 443  | TCP      | HTTPS - Required for secure website access            |
+
+### Opening Ports on UFW (Ubuntu Firewall)
+```bash
+sudo ufw allow 80/tcp
+sudo ufw allow 443/tcp
+sudo ufw reload
+```
+
+### Opening Ports on Firewalld (CentOS/RHEL)
+```bash
+sudo firewall-cmd --permanent --add-port=80/tcp
+sudo firewall-cmd --permanent --add-port=443/tcp
+sudo firewall-cmd --reload
+```
+
+### Check if Ports are Open
+```bash
+# Using netstat
+sudo netstat -tulpn | grep -E ':80|:443'
+
+# Using ss
+sudo ss -tulpn | grep -E ':80|:443'
+
+# Using lsof
+sudo lsof -i :80 -i :443
+```
 
 ## Directory Structure
 
@@ -35,20 +69,33 @@ This repository contains configuration for setting up Nginx with HTTPS using Let
    - Make sure your DNS A record is set up:
      - lol.maleh.my.id → [Your Server IP]
 
-3. **Edit init-letsencrypt.sh**
-   ```bash
-   # Open init-letsencrypt.sh and update the email variable
-   email="your-email@example.com"  # Replace with your actual email
-   ```
-
-4. **Make the Script Executable**
+3. **Make the Script Executable**
    ```bash
    chmod +x init-letsencrypt.sh
    ```
 
-5. **Run the Setup**
+4. **Run the Setup with Your Email**
    ```bash
-   ./init-letsencrypt.sh
+   ./init-letsencrypt.sh your-email@example.com
+   ```
+
+   This command:
+   - Creates necessary directories
+   - Generates temporary SSL certificate
+   - Starts Nginx
+   - Obtains Let's Encrypt certificate
+   - Reloads Nginx with new certificate
+
+5. **Verify the Setup**
+   ```bash
+   # Check running containers
+   docker-compose ps
+   
+   # Check certbot logs
+   docker-compose logs certbot
+   
+   # Check nginx logs
+   docker-compose logs nginx
    ```
    This will:
    - Create required directories
@@ -61,21 +108,36 @@ This repository contains configuration for setting up Nginx with HTTPS using Let
    docker-compose up -d
    ```
 
-## Verification
+## Common Issues and Solutions
 
-1. Check if the containers are running:
+1. **Connection Refused Error**
    ```bash
+   # Check if nginx is listening on ports
+   sudo netstat -tulpn | grep -E ':80|:443'
+   
+   # Check nginx logs
+   docker-compose logs nginx
+   
+   # Verify docker container is running
    docker-compose ps
    ```
 
-2. Visit your website:
-   ```
-   https://lol.maleh.my.id
+2. **Certificate Issuance Fails**
+   ```bash
+   # Check if ports 80/443 are open
+   curl -v http://lol.maleh.my.id/.well-known/acme-challenge/test
+   
+   # Check certbot logs
+   docker-compose logs certbot
    ```
 
-3. Check SSL certificate:
+3. **DNS Issues**
    ```bash
-   curl -vI https://lol.maleh.my.id
+   # Verify DNS resolution
+   dig lol.maleh.my.id
+   
+   # Check A record is pointing to correct IP
+   host lol.maleh.my.id
    ```
 
 ## Maintenance

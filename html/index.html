@@ -16,20 +16,51 @@
         }
         .container {
             text-align: center;
-            padding: 20px;
+            padding: 40px;
             background-color: white;
             border-radius: 8px;
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            max-width: 600px;
+            width: 90%;
         }
-        h1 { color: #ea4335; }
-        p { color: #5f6368; }
+        h1 { 
+            color: #ea4335; 
+            margin-bottom: 20px;
+        }
+        .status {
+            color: #34a853;
+            font-size: 1.2em;
+            margin: 20px 0;
+        }
+        .details {
+            color: #5f6368;
+            margin: 10px 0;
+            text-align: left;
+        }
+        .check-item {
+            margin: 5px 0;
+            display: flex;
+            align-items: center;
+        }
+        .check-item::before {
+            content: "✓";
+            color: #34a853;
+            margin-right: 10px;
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>Welcome to lol.maleh.my.id</h1>
-        <p>Your site is working with HTTPS!</p>
-        <p>🔒 SSL certificate is properly configured</p>
+        <div class="status">✅ Server is running successfully!</div>
+        <div class="details">
+            <div class="check-item">HTTPS Enabled</div>
+            <div class="check-item">SSL Certificate Active</div>
+            <div class="check-item">HTTP/2 Support</div>
+            <div class="check-item">Security Headers Configured</div>
+            <div class="check-item">Auto-Certificate Renewal</div>
+        </div>
     </div>
 </body>
 </html>
